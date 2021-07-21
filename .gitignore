@@ -2,3 +2,5 @@
 /.gradle/
 /src/main/resources/bot.token
 /build/
+/.idea/
+/assets/
