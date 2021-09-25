@@ -3,7 +3,7 @@ package utils;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 
-import java.awt.*;
+import java.awt.Color;
 
 public class Utils {
     /**

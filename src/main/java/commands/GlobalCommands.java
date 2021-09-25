@@ -8,7 +8,7 @@ import net.dv8tion.jda.api.requests.restaction.CommandListUpdateAction;
 import utils.Bot;
 import utils.Utils;
 
-import java.awt.*;
+import java.awt.Color;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;

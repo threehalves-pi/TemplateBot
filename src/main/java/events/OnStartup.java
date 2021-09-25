@@ -14,7 +14,7 @@ import org.slf4j.Logger;
 import utils.Bot;
 import utils.Utils;
 
-import java.awt.*;
+import java.awt.Color;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
