@@ -26,8 +26,8 @@ public class GlobalCommands {
     }
 
     public static void ping(SlashCommandEvent event) {
-        event.reply(String.format("pong (%d)",
-                Duration.between(event.getTimeCreated(), OffsetDateTime.now()).toMillis()))
+        event.reply(String.format("Pong (%d)",
+                Duration.between(OffsetDateTime.now(), event.getTimeCreated()).toMillis()))
                 .queue();
     }
 
