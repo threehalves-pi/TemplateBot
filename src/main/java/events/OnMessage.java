@@ -8,7 +8,7 @@ import utils.Bot;
 public class OnMessage extends ListenerAdapter {
     public void onMessageReceived(@NotNull MessageReceivedEvent event) {
         // Ignore messages from the bot
-        if (event.getAuthor().getIdLong() == Bot.BOT_ID)
+        if (event.getAuthor().getIdLong() == Bot.ID)
             return;
 
         if (event.getMessage().getContentRaw().equals("ping"))

@@ -33,8 +33,8 @@ public class GlobalCommands {
 
     public static void help(SlashCommandEvent event) {
         event.replyEmbeds(Utils.makeEmbed(
-                Bot.BOT_NAME + " Info",
-                "Hi, I'm " + Bot.BOT_NAME + "! " + Bot.BOT_DESCRIPTION,
+                Bot.NAME + " Info",
+                "Hi, I'm " + Bot.NAME + "! " + Bot.BOT_DESCRIPTION,
                 Color.WHITE,
                 Utils.makeEmbedField("Version", "I'm currently running `" + Bot.VERSION + "`.", true)
         ).build()).setEphemeral(true).queue();

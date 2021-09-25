@@ -132,6 +132,10 @@ public class OnStartup extends ListenerAdapter {
         Class<Bot> botClass = Bot.class;
         Map<String, Boolean> map = new HashMap<>();
 
+        // Set the Bot ID and Name
+        Bot.ID = Main.JDA.getSelfUser().getIdLong();
+        Bot.NAME = Main.JDA.getSelfUser().getName();
+
         // Attempt to load bot.properties
         try {
             InputStream stream = botClass.getResourceAsStream("/bot.properties");

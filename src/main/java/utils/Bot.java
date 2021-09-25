@@ -40,7 +40,7 @@ public class Bot {
     // Generic bot config
     public static String PREFIX;
     public static boolean ENABLE_STARTUP_MESSAGE;
-    public static String BOT_NAME;
+    public static String NAME;
     public static String BOT_DESCRIPTION;
     public static String VERSION;
 
@@ -56,7 +56,7 @@ public class Bot {
     public static Activity ACTIVITY;
 
     // Discord Ids
-    public static long BOT_ID;
+    public static long ID;
     public static long DEVELOPMENT_SERVER;
     public static long LOG_CHANNEL;
 }
