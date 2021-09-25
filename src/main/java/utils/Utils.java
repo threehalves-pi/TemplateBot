@@ -1,9 +1,16 @@
 package utils;
 
+import main.Main;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 
+import javax.annotation.Nonnull;
 import java.awt.Color;
+import java.io.BufferedInputStream;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.util.Objects;
+import java.util.Scanner;
 
 public class Utils {
     /**
@@ -13,6 +20,7 @@ public class Utils {
      * @param title  the field title
      * @param value  the contents of the field
      * @param inline whether the field should display inline
+     *
      * @return the newly created {@link MessageEmbed.Field}
      */
     public static MessageEmbed.Field makeEmbedField(String title, String value, boolean inline) {
@@ -25,6 +33,7 @@ public class Utils {
      *
      * @param title the field title
      * @param value the contents of the field
+     *
      * @return the newly created {@link MessageEmbed.Field}
      */
     public static MessageEmbed.Field makeEmbedField(String title, String value) {
@@ -41,6 +50,7 @@ public class Utils {
      * @param color       the color
      * @param footer      the footer
      * @param fields      one or more fields (optionally created with {@link #makeEmbedField(String, String, boolean)}
+     *
      * @return the {@link EmbedBuilder}
      */
     public static EmbedBuilder makeEmbed(
@@ -60,6 +70,7 @@ public class Utils {
      * @param description the description
      * @param color       the color
      * @param fields      one or more fields (optionally created with {@link #makeEmbedField(String, String, boolean)}
+     *
      * @return the {@link EmbedBuilder}
      */
     public static EmbedBuilder makeEmbed(String title, String description, Color color, MessageEmbed.Field... fields) {
@@ -77,6 +88,7 @@ public class Utils {
      * @param description the description
      * @param color       the color
      * @param footer      the footer
+     *
      * @return the {@link EmbedBuilder}
      */
     public static EmbedBuilder makeEmbed(String title, String description, Color color, String footer) {
@@ -90,9 +102,30 @@ public class Utils {
      * @param title       the title
      * @param description the description
      * @param color       the color
+     *
      * @return the {@link EmbedBuilder}
      */
     public static EmbedBuilder makeEmbed(String title, String description, Color color) {
         return new EmbedBuilder().setTitle(title).setDescription(description).setColor(color);
+    }
+
+    /**
+     * Load a resource file based on its name. The "<code>/</code>" before the name is optional, and will be set
+     * automatically if not given. Note that the resource is retrieved using the {@link Main} class.
+     *
+     * @param fileName the name of the resource file
+     *
+     * @return an {@link InputStream} with the resource contents
+     */
+    public static @Nonnull
+    InputStream loadResource(@Nonnull String fileName) {
+        try {
+            return Objects.requireNonNull(
+                    Main.class.getResourceAsStream(fileName.startsWith("/") ? fileName : "/" + fileName)
+            );
+        } catch (NullPointerException e) {
+            Main.LOG.error("Failed to create an input stream from the resource '" + fileName + "'.");
+            throw e;
+        }
     }
 }

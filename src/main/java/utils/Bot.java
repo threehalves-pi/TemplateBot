@@ -8,8 +8,8 @@ import java.awt.Color;
 
 /**
  * This class is designed to work with the <code>bot.properties</code> resource file associated with this Discord bot.
- * All the properties contained in that file have a matching instance variable here that is set with
- * <code>loadProperties()</code> in {@link OnStartup}.
+ * All the properties contained in that file have a matching instance variable here that is set with {@link
+ * OnStartup#loadProperties() loadproperties()} in {@link OnStartup}.
  * <p>
  * To create a new property, add a line to <code>bot.properties</code> in the following format:
  * <p>
@@ -20,7 +20,7 @@ import java.awt.Color;
  * field is <code>public</code> and <code>static</code>, but <i>not</i> <code>final</code>.
  * <p>
  * The property will automatically be loaded from <code>bot.properties</code> to the {@link Bot} field by the private
- * <code>loadProperties()</code> method in {@link OnStartup}. If you use a non-standard field type, you will need to
+ * {@link OnStartup#loadProperties() loadproperties()} method. If you use a non-standard field type, you will need to
  * modify the <code>cast()</code> method in {@link OnStartup} to support that type. By default, it supports:
  * <ul>
  *     <li>{@link String}</li>

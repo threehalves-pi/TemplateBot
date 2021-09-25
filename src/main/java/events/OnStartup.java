@@ -53,7 +53,7 @@ public class OnStartup extends ListenerAdapter {
             GlobalCommands.registerGlobalSlashCommands(Main.JDA.updateCommands());
         if (Bot.LOAD_LOCAL_COMMANDS)
             LocalCommands.registerLocalSlashCommands(Objects.requireNonNull(
-                    Main.JDA.getGuildById(Bot.DEVELOPMENT_SERVER))
+                            Main.JDA.getGuildById(Bot.DEVELOPMENT_SERVER))
                     .updateCommands());
 
         // If a startup log message was enabled, send it
@@ -90,8 +90,8 @@ public class OnStartup extends ListenerAdapter {
         // Send the message
         try {
             Objects.requireNonNull(Objects.requireNonNull(Main.JDA
-                    .getGuildById(Bot.DEVELOPMENT_SERVER))
-                    .getTextChannelById(Bot.LOG_CHANNEL))
+                                    .getGuildById(Bot.DEVELOPMENT_SERVER))
+                            .getTextChannelById(Bot.LOG_CHANNEL))
                     .sendMessageEmbeds(
                             Utils.makeEmbed(
                                     Main.JDA.getSelfUser().getName() + " Startup Log",
@@ -117,6 +117,7 @@ public class OnStartup extends ListenerAdapter {
      * If it is false, <code>:no_entry_sign:</code> is returned.
      *
      * @param bool the boolean to use
+     *
      * @return a check mark emoji if the boolean is true, or a no entry sign emoji if the boolean is false
      */
     private static String booleanEmoji(boolean bool) {
@@ -138,18 +139,17 @@ public class OnStartup extends ListenerAdapter {
 
         // Attempt to load bot.properties
         try {
-            InputStream stream = botClass.getResourceAsStream("/bot.properties");
-            if (stream == null) {
-                LOG.error("Unable to locate bot.properties. Confirm that it is located in the " +
-                          "resources folder for the module containing Bot.java.");
-                return null;
-            }
+            InputStream stream = Utils.loadResource("/bot.properties");
             prop.load(stream);
+            stream.close();
+        } catch (NullPointerException e) {
+            LOG.error("Unable to locate bot.properties. Confirm that it is located in the " +
+                      "resources folder for the module containing Bot.java.");
+            return null;
         } catch (IOException e) {
             LOG.error("Failed to read bot.properties on startup.", e);
             return null;
         }
-
 
         // Iterate through each of the properties in bot.properties and set the corresponding Bot class field
 
@@ -220,8 +220,9 @@ public class OnStartup extends ListenerAdapter {
      * @param type the name of the desired {@link Activity.ActivityType} enum, or its key
      * @param text the text (if applicable) associated with the desired {@link Activity.ActivityType}
      * @param url  the streaming url (only relevant if the activity is <code>"streaming"</code>)
+     *
      * @return the newly created {@link Activity}, or <code>null</code>> if the activity type was '<code>default</code>'
-     * or unknown
+     *         or unknown
      */
     private static @Nullable Activity getActivity(
             @NotNull String type, @NotNull String text, @Nullable String url) {
@@ -241,6 +242,7 @@ public class OnStartup extends ListenerAdapter {
      *
      * @param value the value to parse/cast
      * @param type  the type to convert it to
+     *
      * @return the converted object matching the Java type of the type parameter
      */
     private static Object cast(String value, Class<?> type) throws ClassNotFoundException {

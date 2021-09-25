@@ -7,10 +7,10 @@ import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.internal.utils.JDALogger;
 import org.slf4j.Logger;
+import utils.Utils;
 
 import javax.security.auth.login.LoginException;
 import java.io.IOException;
-import java.util.Objects;
 
 public class Main {
     public static JDA JDA;
@@ -18,7 +18,7 @@ public class Main {
 
     public static void main(String[] args) throws IOException, LoginException {
         String token = new String(
-                Objects.requireNonNull(Main.class.getResourceAsStream("/bot.token")).readAllBytes()
+                Utils.loadResource("/bot.token").readAllBytes()
         );
 
         JDA = JDABuilder.createDefault(token)
