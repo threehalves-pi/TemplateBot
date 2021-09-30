@@ -45,15 +45,24 @@ Open the `Gradle` tab on the right. Right click on the project name, and choose 
 ![image](https://user-images.githubusercontent.com/86887292/135365534-bdd0d0d0-1dba-471a-b1db-1ef02316d839.png)
 
 ## Step 8
-Open the `bot.properties` file in the **Resources** folder for the **main** module. Read through all of the configuration settings and the comments, and make the necessary changes for your bot.\
+Delete the unnecessary files used for GitHub that aren't necessary for your bot. In particular, remove `.gitignore` and `README.md` in the root directory.
+
+## Step 9
+Open `src\main\resources\bot.properties`. Read through all of the configuration settings and the comments, and make the necessary changes for your bot.\
 \
 ![image](https://user-images.githubusercontent.com/86887292/135365719-aeabad1f-0d73-42fc-a81e-ee369e6b375c.png)
 
-## Step 9
+## Step 10
+With `src\main\resources\` still open, create a file in the **resources** directory called `bot.token`. (If IntelliJ gives a prompt regarding the file type, leave everything at the default for text files, and press `OK`.) Get your bot's token from the `Bot` tab on the [Discord developers](https://discord.com/developers) page, and paste it in this file. Do not include a linebreak at the end.\
+\
+![image](https://user-images.githubusercontent.com/86887292/135457879-9b8d61e2-cbb8-4c9d-b85e-6e74b969be8b.png)
+
+
+## Step 11
 When you are ready to start your bot for the first time, open the `main.Main` file and execute the `main()` method. Wait for gradle to build and run your project, and then test the bot by typing "ping" in your development server.\
 \
 ![image](https://user-images.githubusercontent.com/86887292/135365796-adf35f26-a999-420f-bf35-a443f58645f5.png)
 
-## Step 10
+## Step 12
 That's it! You now have a rudimentary Discord bot based on TemplateBot. To start coding basic features, look at the `OnMessage` class in the `events` package.
 
