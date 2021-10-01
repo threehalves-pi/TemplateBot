@@ -3,15 +3,19 @@ package events;
 import commands.GlobalCommands;
 import commands.LocalCommands;
 import main.Main;
+import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.OnlineStatus;
 import net.dv8tion.jda.api.entities.Activity;
+import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.ReadyEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.managers.Presence;
+import net.dv8tion.jda.api.utils.TimeFormat;
 import net.dv8tion.jda.internal.utils.JDALogger;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import utils.Bot;
+import utils.Colors;
 import utils.Utils;
 
 import javax.annotation.Nonnull;
@@ -19,8 +23,6 @@ import java.awt.Color;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -29,35 +31,87 @@ import java.util.*;
  * <p>
  * For the most part, this class should not be modified except to make changes to TemplateBot's underlying structure.
  * <p>
- * If you are trying to execute initial tasks at startup, write a method to execute those tasks, and call your setup
- * method at the end of {@link #startupTasks()}. It will run exactly once when the bot is started. Make sure that your
- * method does not throw any exceptions (except for errors printed to console) so as not to impede the startup process.
+ * <b>If you are trying to execute initial tasks at startup</b>:
+ * <ol>
+ *     <li>Write a <code>public static</code> method to execute the desired task. Make sure all {@link Exception
+ *     Exceptions} are caught within the method.
+ *     <li>Call your method somewhere in {@link #startupTasks(Map)}. It will run exactly once when the bot is started.
+ *     <li>Optionally, have your method return a {@link Result Result} indicating whether it was successful, and add
+ *     that result and a short description of the task to the <code>results</code> map. (See the implementation of
+ *     {@link #setStatus()} within {@link #startupTasks(Map) startupTasks()} for an example).
+ * </ol>
  */
 public class OnStartup extends ListenerAdapter {
     /**
-     * This is the logger for printing bot startup information. Use this only for logging done through {@link
-     * #startupTasks()} and the methods that it calls.
+     * This method runs once when the bot starts. Add code to this method that you need to run when the bot loads.
+     * <p>
+     * Optionally, add a description of the task and a {@link Result Result} to <code>results</code>, and the task will
+     * be printed in the {@link Bot.Config#ENABLE_STARTUP_MESSAGE startup message} that the bot sends to the {@link
+     * Bot.ID.Channel#LOG log} channel.
      */
-    public static final Logger LOG = JDALogger.getLog(OnStartup.class);
+    private static void startupTasks(@Nonnull Map<String, Result> results) {
+        // Set the bot status and activity
+        results.put("Set bot status/activity", setStatus());
+
+        // Load slash commands, if enabled
+        loadSlashCommands(results);
+    }
 
     /**
-     * This method runs once when the bot starts. Add code to the end of this method that you need to run when the bot
-     * loads.
+     * This is the logger for printing bot startup information. Use this only for logging done through {@link
+     * #startupTasks(Map)} and the methods that it calls.
      */
-    private static void startupTasks() {
-        // Load bot.properties and send startup message (if enabled)
-        Map<String, Boolean> propertyImportResults = loadProperties();
-        if (Bot.Config.ENABLE_STARTUP_MESSAGE)
-            sendLogMessage(propertyImportResults);
+    public static final Logger LOG = JDALogger.getLog(OnStartup.class);
+    private static int propertiesTotal = 0;
 
-        // Set the bot status and activity
-        setStatus();
+    private static int propertiesSuccessful = 0;
 
-        // Load slash commands, if applicable
-        if (Bot.Config.LOAD_GLOBAL_COMMANDS)
-            GlobalCommands.registerGlobalSlashCommands(Main.JDA.updateCommands());
-        if (Bot.Config.LOAD_LOCAL_COMMANDS)
-            LocalCommands.registerLocalSlashCommands(Utils.getGuild(Bot.ID.Guild.DEVELOPMENT).updateCommands());
+    /**
+     * The possible results that can be returned when attempting to perform task on startup. When compiled, these are
+     * used to help print the {@link Bot.Config#ENABLE_STARTUP_MESSAGE startup message}. There are three possible
+     * results:
+     * <ul>
+     *     <li>{@link #SUCCESS} indicates that the task executed properly
+     *     <li>{@link #FAILURE} indicates that the task failed for some reason
+     *     <li>{@link #OMITTED} means that the task was not attempted, and thus neither succeeded nor failed
+     * </ul>
+     */
+    public enum Result {
+        /**
+         * The task executed as expected.
+         */
+        SUCCESS,
+
+        /**
+         * The task encountered an unexpected failure or {@link Exception}, and did not complete successfully.
+         */
+        FAILURE,
+
+        /**
+         * The task was not attempted, typically because it was disabled either by another task or a configuration
+         * setting from <code>bot.properties</code>.
+         */
+        OMITTED;
+
+        /**
+         * Returns an emoji corresponding to a {@link Result Result}, according to the following mapping:
+         * <ul>
+         * <li>{@link #SUCCESS} - "<code>:white_check_mark:</code>"
+         * <li>{@link #FAILURE} - "<code>:x:</code>"
+         * <li>{@link #OMITTED} - "<code>:no_entry:</code>"
+         * </ul>
+         *
+         * @param result the result to represent as an emoji
+         *
+         * @return an emoji representing the given result
+         */
+        private static String emoji(Result result) {
+            return switch (result) {
+                case SUCCESS -> "\u2705";
+                case FAILURE -> "\u274C";
+                case OMITTED -> "\u26D4";
+            };
+        }
     }
 
     /**
@@ -71,18 +125,34 @@ public class OnStartup extends ListenerAdapter {
         System.out.println();
         LOG.info("Running startup processes...");
 
+        // This map stores the results of all the startup tasks. It's used to help print the startup message.
+        Map<String, Result> startupResults = new LinkedHashMap<>();
+
         LOG.info(String.format("ReadyEvent count: %d available guilds; %d unavailable guilds. Total: %d",
                 event.getGuildAvailableCount(),
                 event.getGuildUnavailableCount(),
                 event.getGuildTotalCount()));
 
+        // Load bot.properties and store the results
+        if (loadProperties(startupResults) == Result.FAILURE)
+            return;
+
+        if (propertiesTotal == propertiesSuccessful)
+            startupResults.put("Loaded `bot.properties`", Result.SUCCESS);
+        else
+            startupResults.put("Partial failure loading `bot.properties`", Result.FAILURE);
+
         // Run startup tasks
         try {
-            startupTasks();
+            startupTasks(startupResults);
         } catch (Exception e) {
             LOG.error("Encountered an error while running startup tasks.");
             e.printStackTrace();
         }
+
+        // Send the startup message (if enabled)
+        if (Bot.Config.ENABLE_STARTUP_MESSAGE)
+            sendLogMessage(startupResults);
 
         // Create break in console now that setup has finished
         LOG.info("Finished startup processes");
@@ -90,73 +160,77 @@ public class OnStartup extends ListenerAdapter {
     }
 
     /**
-     * This sends a message to {@link Bot.ID.Channel#LOG} whenever the bot starts that contains information on the
-     * initial bot state. Primarily, it lists all the properties imported from <code>bot.properties</code>, along with
-     * whether they were imported correctly.
-     * <p>
-     * If the list of property import results is null, something went seriously wrong, and a warning startup message is
-     * sent.
+     * This sends a message to the {@link Bot.ID.Channel#LOG log} channel containing information on the initial bot
+     * state and a report on which {@link #startupTasks(Map) startup tasks} were completed successfully.
+     *
+     * @param startupResults the map of startup tasks and their corresponding result when executed
      */
-    private static void sendLogMessage(@Nullable Map<String, Boolean> results) {
-        StringBuilder log = new StringBuilder();
+    private static void sendLogMessage(@Nonnull Map<String, Result> startupResults) {
+        // Define the initial log message
+        EmbedBuilder log = Utils.makeEmbed(
+                Bot.Self.NAME + " Startup Log",
+                String.format("Startup time: %s%nVersion: `%s`",
+                        TimeFormat.TIME_LONG.now(), Bot.Self.VERSION),
+                Colors.WHITE);
 
-        // Build the startup checklist for each of the properties, or assign it to an error message if loading failed
-        if (results == null)
-            log.append("ERROR: Failed to properly load bot.properties file. Consult runtime console immediately.");
-        else
-            for (String property : results.keySet())
-                log
-                        .append("\n")
-                        .append(booleanEmoji(results.get(property)))
-                        .append(" ")
-                        .append(property);
-
-        // Send the message
-        try {
-            Objects.requireNonNull(Objects.requireNonNull(Main.JDA
-                                    .getGuildById(Bot.ID.Guild.DEVELOPMENT))
-                            .getTextChannelById(Bot.ID.Channel.LOG))
-                    .sendMessageEmbeds(
-                            Utils.makeEmbed(
-                                    Main.JDA.getSelfUser().getName() + " Startup Log",
-                                    "Bot started on " +
-                                    DateTimeFormatter.ofPattern("MM/dd 'at' HH:mm:ss").format(LocalDateTime.now()),
-                                    results == null ? Color.RED : Color.WHITE,
-                                    Utils.makeField(
-                                            "Bot.properties",
-                                            log.substring(1)),
-                                    Utils.makeField(
-                                            "Slash Commands",
-                                            booleanEmoji(Bot.Config.LOAD_GLOBAL_COMMANDS) + " Loaded global " +
-                                            "commands\n" +
-                                            booleanEmoji(Bot.Config.LOAD_LOCAL_COMMANDS) + " Loaded local commands")
-                            ).build())
-                    .queue();
-        } catch (Exception e) {
-            LOG.error("Failed to send startup message to log channel", e);
+        // Add a field listing the number of successfully loaded properties. If some properties failed to load,
+        // change the embed to red and mark an error.
+        if (propertiesSuccessful == propertiesTotal)
+            log.addField(Utils.makeField("Bot Properties", String.format(
+                    "Successfully loaded **%d** properties from `bot.properties` with **0** failures.",
+                    propertiesTotal
+            )));
+        else {
+            log.addField(Utils.makeField("Bot Properties Error", String.format(
+                    "Failed to load **%d**/**%d** properties from `bot.properties`. " +
+                    "Consult the console for more information.",
+                    propertiesTotal - propertiesSuccessful,
+                    propertiesTotal
+            )));
+            log.setColor(Colors.RED);
         }
-    }
 
-    /**
-     * Returns an emoji corresponding to a boolean. If the boolean is true, <code>:white_check_mark:</code> is returned.
-     * If it is false, <code>:no_entry_sign:</code> is returned.
-     *
-     * @param bool the boolean to use
-     *
-     * @return a check mark emoji if the boolean is true, or a no entry sign emoji if the boolean is false
-     */
-    private static String booleanEmoji(boolean bool) {
-        return bool ? "\u2705" : "\uD83D\uDEAB";
+        StringBuilder tasksLog = new StringBuilder();
+
+        // Build the startup checklist for each of the properties
+        for (String property : startupResults.keySet())
+            tasksLog
+                    .append("\n")
+                    .append(Result.emoji(startupResults.get(property)))
+                    .append(" ")
+                    .append(property);
+
+        log.addField(Utils.makeField(
+                "Startup Tasks",
+                tasksLog.substring(1)));
+
+        // Attempt to send the startup message
+        try {
+            TextChannel channel = Utils.getGuild(Bot.ID.Guild.DEVELOPMENT).getTextChannelById(Bot.ID.Channel.LOG);
+            assert channel != null;
+            channel.sendMessageEmbeds(log.build()).queue();
+        } catch (NullPointerException ignore) {
+            LOG.error("Failed to send the startup message. Couldn't get log channel in development server. " +
+                      "Check IDs in bot.properties.");
+        } catch (Exception e) {
+            LOG.error("Failed to send startup message to the log channel.", e);
+        }
     }
 
     /**
      * This loads the configuration settings from the <code>bot.properties</code> resource file and stores the data as
      * instance variables within {@link Bot}.
+     *
+     * @param resultMap a map of results to log whether each of the properties is loaded properly
+     *
+     * @return {@link Result#SUCCESS success} if the <code>bot.properties</code> file is loaded successfully. Otherwise
+     *         returns {@link Result#FAILURE failure}. This is not directly related to whether any of the properties
+     *         themselves are properly loaded.
      */
-    private static Map<String, Boolean> loadProperties() {
+    @Nonnull
+    private static Result loadProperties(@Nonnull Map<String, Result> resultMap) {
         Properties prop = new Properties();
         Class<Bot> botClass = Bot.class;
-        Map<String, Boolean> map = new HashMap<>();
 
         // Set the Bot ID and Name
         Bot.Self.USER = Main.JDA.getSelfUser();
@@ -171,26 +245,28 @@ public class OnStartup extends ListenerAdapter {
         } catch (NullPointerException e) {
             LOG.error("Unable to locate the bot.properties file. Confirm that it is located in the " +
                       "resources folder for the module containing Main.java.");
-            return null;
+            return Result.FAILURE;
         } catch (IOException e) {
             LOG.error("Failed to read the bot.properties file on startup (IOException).", e);
-            return null;
+            return Result.FAILURE;
         }
 
         // Get all the fields in the Bot class and its subclasses
         Map<String, Field> fields = getAllFields(botClass);
 
         // Iterate through each of the properties in bot.properties and set the corresponding Bot class field
+        propertiesTotal = prop.stringPropertyNames().size();
         for (String property : prop.stringPropertyNames())
-            map.put(property, setProperty(property, prop.getProperty(property), fields));
+            if (setProperty(property, prop.getProperty(property), fields) == Result.SUCCESS)
+                propertiesSuccessful++;
 
         // Log result to console
-        int successes = (int) map.values().stream().filter(b -> b).count();
-        LOG.info(String.format("Loaded %d properties with %d failures from bot.properties",
-                successes,
-                prop.stringPropertyNames().size() - successes));
+        LOG.info(String.format("Loaded %d properties with %d %s from bot.properties",
+                propertiesTotal,
+                propertiesTotal - propertiesSuccessful,
+                propertiesTotal - propertiesSuccessful == 1 ? "failure" : "failures"));
 
-        return map;
+        return Result.SUCCESS;
     }
 
     /**
@@ -200,11 +276,12 @@ public class OnStartup extends ListenerAdapter {
      * @param value    the property value
      * @param fields   the list of all fields in the {@link Bot} class.
      *
-     * @return <code>true</code> if and only if the value is set without errors; <code>false</code> if an exception
-     *         is thrown and an error is {@link #LOG logged} to the console.
+     * @return {@link Result#SUCCESS Success} if and only if the value is set without errors; {@link Result#FAILURE
+     *         failure} if an exception is thrown and an error is {@link #LOG logged} to the console.
      */
-    private static boolean setProperty(@Nonnull String property, @Nonnull String value,
-                                       @Nonnull Map<String, Field> fields) {
+    @Nonnull
+    private static Result setProperty(@Nonnull String property, @Nonnull String value,
+                                      @Nonnull Map<String, Field> fields) {
         String name = property.toUpperCase();
 
         try {
@@ -214,7 +291,7 @@ public class OnStartup extends ListenerAdapter {
                 throw new NoSuchFieldException();
             field.set(null, cast(value, field.getType()));
 
-            return true;
+            return Result.SUCCESS;
         } catch (NoSuchFieldException e) {
             LOG.error("Unable to find a static Bot field with the name '" + name +
                       "'. This property was not set.");
@@ -224,12 +301,56 @@ public class OnStartup extends ListenerAdapter {
                 IllegalArgumentException e) {
             LOG.error("Unable to set the property '" + name + "'. Is it marked public, static, and not final?");
         } catch (ClassNotFoundException e) {
+            // The data type was not recognized. Use the custom error message thrown by the cast() method
             LOG.error("Unable to set the property '" + name + "'. " + e.getMessage());
         } catch (Exception e) {
             LOG.error("Unable to set the property '" + name + "'. Cause is unknown.", e);
         }
 
-        return false;
+        return Result.FAILURE;
+    }
+
+    /**
+     * Attempt to parse/cast the {@link String} value obtained from <code>bot.properties</code> into the requested
+     * type.
+     *
+     * @param value the value to parse/cast
+     * @param type  the type to convert it to
+     *
+     * @return the converted object matching the Java type of the type parameter
+     */
+    @Nonnull
+    private static Object cast(@Nonnull String value, @Nonnull Class<?> type) throws ClassNotFoundException {
+        if (type == String.class)
+            return value;
+
+            // Check primitive types
+        else if (type == Boolean.class || type == Boolean.TYPE)
+            return Boolean.parseBoolean(value);
+        else if (type == Integer.class || type == Integer.TYPE)
+            return Integer.parseInt(value);
+        else if (type == Double.class || type == Double.TYPE)
+            return Double.parseDouble(value);
+        else if (type == Long.class || type == Long.TYPE)
+            return Long.parseLong(value);
+        else if (type == Float.class || type == Float.TYPE)
+            return Float.parseFloat(value);
+        else if (type == Short.class || type == Short.TYPE)
+            return Short.parseShort(value);
+        else if (type == Character.class || type == Character.TYPE)
+            return value.charAt(0);
+        else if (type == Byte.class || type == Byte.TYPE)
+            return Byte.valueOf(value);
+
+            // Check JDA types
+        else if (type == OnlineStatus.class)
+            return OnlineStatus.fromKey(value);
+
+            // Check misc types
+        else if (type == Color.class)
+            return new Color(Integer.parseInt(value, 16));
+
+        throw new ClassNotFoundException("Failed to recognize class type " + type.toGenericString());
     }
 
     /**
@@ -322,8 +443,13 @@ public class OnStartup extends ListenerAdapter {
      *     <li>'<code>competing</code>' or '<code>5</code>'</li>
      *     <li>'<code>playing</code>'</li>
      * </ul>
+     *
+     * @return {@link Result#SUCCESS Success} if the status and activity {@link Presence#setPresence(OnlineStatus,
+     *         Activity) presence} data were set. Returns {@link Result#OMITTED not_attempted} if this was intentionally
+     *         disabled by setting the status to {@link OnlineStatus#UNKNOWN unknown}. Otherwise, returns {@link
+     *         Result#FAILURE failure} to indicate an error or failure of some sort.
      */
-    private static void setStatus() {
+    private static Result setStatus() {
         try {
             try {
                 // Create the desired Activity
@@ -340,12 +466,15 @@ public class OnStartup extends ListenerAdapter {
                           "Check activity_type, activity_text, and activity_url properties.\n" +
                           e.getClass().getName() + ": " + e.getMessage());
                 Bot.Status.ACTIVITY = null;
-                return;
+                return Result.FAILURE;
             }
 
+            if (Bot.Status.STATUS == OnlineStatus.UNKNOWN)
+                return Result.OMITTED;
+
             // If the status or activity is null or unknown, don't set it.
-            if (Bot.Status.ACTIVITY == null || Bot.Status.STATUS == null || Bot.Status.STATUS == OnlineStatus.UNKNOWN)
-                return;
+            if (Bot.Status.ACTIVITY == null || Bot.Status.STATUS == null)
+                return Result.FAILURE;
 
             // Set bot status and activity
             Main.JDA.getPresence().setPresence(Bot.Status.STATUS, Bot.Status.ACTIVITY);
@@ -355,49 +484,41 @@ public class OnStartup extends ListenerAdapter {
             LOG.error("Encountered an unexpected error while attempting to set the bot status and activity:\n" +
                       e.getClass().getName() + ": " + e.getMessage());
         }
+
+        return Result.SUCCESS;
     }
 
     /**
-     * Attempt to parse/cast the {@link String} value obtained from <code>bot.properties</code> into the requested
-     * type.
+     * Load the slash commands, if enabled.
      *
-     * @param value the value to parse/cast
-     * @param type  the type to convert it to
-     *
-     * @return the converted object matching the Java type of the type parameter
+     * @param results the map in which to log the {@link Result Results}
      */
-    @Nonnull
-    private static Object cast(@Nonnull String value, @Nonnull Class<?> type) throws ClassNotFoundException {
-        if (type == String.class)
-            return value;
+    private static void loadSlashCommands(@Nonnull Map<String, Result> results) {
+        Result global, local;
 
-            // Check primitive types
-        else if (type == Boolean.class || type == Boolean.TYPE)
-            return Boolean.parseBoolean(value);
-        else if (type == Integer.class || type == Integer.TYPE)
-            return Integer.parseInt(value);
-        else if (type == Double.class || type == Double.TYPE)
-            return Double.parseDouble(value);
-        else if (type == Long.class || type == Long.TYPE)
-            return Long.parseLong(value);
-        else if (type == Float.class || type == Float.TYPE)
-            return Float.parseFloat(value);
-        else if (type == Short.class || type == Short.TYPE)
-            return Short.parseShort(value);
-        else if (type == Character.class || type == Character.TYPE)
-            return value.charAt(0);
-        else if (type == Byte.class || type == Byte.TYPE)
-            return Byte.valueOf(value);
+        try {
+            if (Bot.Config.LOAD_GLOBAL_COMMANDS) {
+                GlobalCommands.registerGlobalSlashCommands(Main.JDA.updateCommands());
+                global = Result.SUCCESS;
+            } else
+                global = Result.OMITTED;
+        } catch (Exception e) {
+            LOG.error("Encountered an unexpected error while attempting to load global slash commands.", e);
+            global = Result.FAILURE;
+        }
 
-            // Check JDA types
-        else if (type == OnlineStatus.class)
-            return OnlineStatus.fromKey(value);
+        try {
+            if (Bot.Config.LOAD_LOCAL_COMMANDS) {
+                LocalCommands.registerLocalSlashCommands(Utils.getGuild(Bot.ID.Guild.DEVELOPMENT).updateCommands());
+                local = Result.SUCCESS;
+            } else
+                local = Result.OMITTED;
+        } catch (Exception e) {
+            LOG.error("Encountered an unexpected error while attempting to load local slash commands.", e);
+            local = Result.FAILURE;
+        }
 
-            // Check misc types
-        else if (type == Color.class)
-            return new Color(Integer.parseInt(value, 16));
-
-        throw new ClassNotFoundException("Failed to recognize class type " + type.toGenericString());
+        results.put("Loaded global slash commands", global);
+        results.put("Loaded local slash commands", local);
     }
-
 }
