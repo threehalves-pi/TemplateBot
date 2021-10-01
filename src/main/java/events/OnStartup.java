@@ -134,7 +134,7 @@ public class OnStartup extends ListenerAdapter {
                 event.getGuildTotalCount()));
 
         // Load bot.properties and store the results
-        if (loadProperties(startupResults) == Result.FAILURE)
+        if (loadProperties() == Result.FAILURE)
             return;
 
         if (propertiesTotal == propertiesSuccessful)
@@ -221,14 +221,12 @@ public class OnStartup extends ListenerAdapter {
      * This loads the configuration settings from the <code>bot.properties</code> resource file and stores the data as
      * instance variables within {@link Bot}.
      *
-     * @param resultMap a map of results to log whether each of the properties is loaded properly
-     *
      * @return {@link Result#SUCCESS success} if the <code>bot.properties</code> file is loaded successfully. Otherwise
      *         returns {@link Result#FAILURE failure}. This is not directly related to whether any of the properties
      *         themselves are properly loaded.
      */
     @Nonnull
-    private static Result loadProperties(@Nonnull Map<String, Result> resultMap) {
+    private static Result loadProperties() {
         Properties prop = new Properties();
         Class<Bot> botClass = Bot.class;
 
