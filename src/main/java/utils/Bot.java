@@ -11,32 +11,32 @@ import java.awt.Color;
 /**
  * This class is designed to work with the <code>bot.properties</code> resource file associated with this Discord bot.
  * All the properties contained in that file have a matching instance variable here that is set with {@link
- * OnStartup#loadProperties() loadproperties()} in {@link OnStartup}.
+ * OnStartup#loadProperties() loadProperties()} in {@link OnStartup}.
  * <p>
  * To create a new property, add a line to <code>bot.properties</code> in the following format:
  * <p>
  * <code>resource_name=value</code>
  * <p>
- * Then create a field in {@link Bot} with the <i>same name</i> as the property. Ensure that the {@link Bot} field is
- * all uppercase; the property name is case-insensitive in <code>bot.properties</code>. Make sure that the {@link Bot}
- * field is <code>public</code> and <code>static</code>, but <i>not</i> <code>final</code>.
+ * Then create a field in {@link Bot} with the <i>same name</i> as the property. Ensure that the {@link Bot} field here
+ * is all uppercase; the property name is case-insensitive in <code>bot.properties</code>. Make sure that the {@link
+ * Bot} field is <code>public</code> and <code>static</code>, but <i>not</i> <code>final</code>.
  * <p>
  * The property will automatically be loaded from <code>bot.properties</code> to the {@link Bot} field by the private
  * {@link OnStartup#loadProperties() loadproperties()} method. If you use a non-standard field type, you will need to
- * modify the <code>cast()</code> method in {@link OnStartup} to support that type. By default, it supports:
+ * modify the {@link OnStartup#cast(String, Class) cast()} method to support that type. By default, it supports:
  * <ul>
- *     <li>{@link String}</li>
- *     <li>{@link Character}</li>
- *     <li>{@link Byte}</li>
- *     <li>{@link Boolean}</li>
- *     <li>{@link Integer}</li>
- *     <li>{@link Long}</li>
- *     <li>{@link Float}</li>
- *     <li>{@link Short}</li>
- *     <li>{@link OnlineStatus}</li>
- *     <li>{@link Color}</li>
- *     <li>And all respective primitive types.</li>
- * </ul>
+ * <li>{@link String}</li>
+ * <li>{@link Character}</li>
+ * <li>{@link Byte}</li>
+ * <li>{@link Boolean}</li>
+ * <li>{@link Integer}</li>
+ * <li>{@link Long}</li>
+ * <li>{@link Float}</li>
+ * <li>{@link Short}</li>
+ * <li>{@link OnlineStatus}</li>
+ * <li>{@link Color}</li>
+ * <li>And all respective primitive types.</li>
+ * </ul><p>
  */
 public class Bot {
     /**
