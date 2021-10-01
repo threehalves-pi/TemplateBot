@@ -27,16 +27,16 @@ public class GlobalCommands {
 
     public static void ping(SlashCommandEvent event) {
         event.reply(String.format("Pong (%d)",
-                Duration.between(OffsetDateTime.now(), event.getTimeCreated()).toMillis()))
+                        Duration.between(OffsetDateTime.now(), event.getTimeCreated()).toMillis()))
                 .queue();
     }
 
     public static void help(SlashCommandEvent event) {
         event.replyEmbeds(Utils.makeEmbed(
-                Bot.NAME + " Info",
-                "Hi, I'm " + Bot.NAME + "! " + Bot.BOT_DESCRIPTION,
+                Bot.Self.NAME + " Info",
+                "Hi, I'm " + Bot.Self.NAME + "! " + Bot.Self.DESCRIPTION,
                 Color.WHITE,
-                Utils.makeEmbedField("Version", "I'm currently running `" + Bot.VERSION + "`.", true)
+                Utils.makeField("Version", "I'm currently running `" + Bot.Self.VERSION + "`.", true)
         ).build()).setEphemeral(true).queue();
     }
 }

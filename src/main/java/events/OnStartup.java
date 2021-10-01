@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import utils.Bot;
 import utils.Utils;
 
+import javax.annotation.Nonnull;
 import java.awt.Color;
 import java.io.IOException;
 import java.io.InputStream;
@@ -22,8 +23,43 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
+/**
+ * This class contains almost all of the code specific to TemplateBot. This is what retrieves the settings defined in
+ * <code>bot.properties</code> and stores them in the {@link Bot} class constants.
+ * <p>
+ * For the most part, this class should not be modified except to make changes to TemplateBot's underlying structure.
+ * <p>
+ * If you are trying to execute initial tasks at startup, write a method to execute those tasks, and call your setup
+ * method at the end of {@link #startupTasks()}. It will run exactly once when the bot is started. Make sure that your
+ * method does not throw any exceptions (except for errors printed to console) so as not to impede the startup process.
+ */
 public class OnStartup extends ListenerAdapter {
+    /**
+     * This is the logger for printing bot startup information. Use this only for logging done through {@link
+     * #startupTasks()} and the methods that it calls.
+     */
     public static final Logger LOG = JDALogger.getLog(OnStartup.class);
+
+    /**
+     * This method runs once when the bot starts. Add code to the end of this method that you need to run when the bot
+     * loads.
+     */
+    private static void startupTasks() {
+        // Load bot.properties and send startup message (if enabled)
+        Map<String, Boolean> propertyImportResults = loadProperties();
+        if (Bot.Config.ENABLE_STARTUP_MESSAGE)
+            sendLogMessage(propertyImportResults);
+
+        // Set bot status and activity
+        Main.JDA.getPresence().setPresence(Bot.Status.STATUS, Bot.Status.ACTIVITY);
+        LOG.info("Updated bot presence");
+
+        // Load slash commands, if applicable
+        if (Bot.Config.LOAD_GLOBAL_COMMANDS)
+            GlobalCommands.registerGlobalSlashCommands(Main.JDA.updateCommands());
+        if (Bot.Config.LOAD_LOCAL_COMMANDS)
+            LocalCommands.registerLocalSlashCommands(Utils.getGuild(Bot.ID.Guild.DEVELOPMENT).updateCommands());
+    }
 
     /**
      * This method is called once when the bot initially starts. It performs basic setup tasks including loading the bot
@@ -41,24 +77,12 @@ public class OnStartup extends ListenerAdapter {
                 event.getGuildUnavailableCount(),
                 event.getGuildTotalCount()));
 
-        // Load bot.properties
-        Map<String, Boolean> propertyImportResults = loadProperties();
-
-        // Set bot status and activity
-        Main.JDA.getPresence().setPresence(Bot.STATUS, Bot.ACTIVITY);
-        LOG.info("Updated bot presence");
-
-        // Load slash commands, if applicable
-        if (Bot.LOAD_GLOBAL_COMMANDS)
-            GlobalCommands.registerGlobalSlashCommands(Main.JDA.updateCommands());
-        if (Bot.LOAD_LOCAL_COMMANDS)
-            LocalCommands.registerLocalSlashCommands(Objects.requireNonNull(
-                            Main.JDA.getGuildById(Bot.DEVELOPMENT_SERVER))
-                    .updateCommands());
-
-        // If a startup log message was enabled, send it
-        if (Bot.ENABLE_STARTUP_MESSAGE)
-            sendLogMessage(propertyImportResults);
+        try {
+            startupTasks();
+        } catch (Exception e) {
+            LOG.error("Encountered an error while running startup tasks.");
+            e.printStackTrace();
+        }
 
         // Create break in console now that setup has finished
         LOG.info("Finished startup processes");
@@ -66,9 +90,9 @@ public class OnStartup extends ListenerAdapter {
     }
 
     /**
-     * This sends a message to {@link Bot#LOG_CHANNEL} whenever the bot starts that contains information on the initial
-     * bot state. Primarily, it lists all the properties imported from <code>bot.properties</code>, along with whether
-     * they were imported correctly.
+     * This sends a message to {@link Bot.ID.Channel#LOG} whenever the bot starts that contains information on the
+     * initial bot state. Primarily, it lists all the properties imported from <code>bot.properties</code>, along with
+     * whether they were imported correctly.
      * <p>
      * If the list of property import results is null, something went seriously wrong, and a warning startup message is
      * sent.
@@ -90,21 +114,22 @@ public class OnStartup extends ListenerAdapter {
         // Send the message
         try {
             Objects.requireNonNull(Objects.requireNonNull(Main.JDA
-                                    .getGuildById(Bot.DEVELOPMENT_SERVER))
-                            .getTextChannelById(Bot.LOG_CHANNEL))
+                                    .getGuildById(Bot.ID.Guild.DEVELOPMENT))
+                            .getTextChannelById(Bot.ID.Channel.LOG))
                     .sendMessageEmbeds(
                             Utils.makeEmbed(
                                     Main.JDA.getSelfUser().getName() + " Startup Log",
                                     "Bot started on " +
                                     DateTimeFormatter.ofPattern("MM/dd 'at' HH:mm:ss").format(LocalDateTime.now()),
                                     results == null ? Color.RED : Color.WHITE,
-                                    Utils.makeEmbedField(
+                                    Utils.makeField(
                                             "Bot.properties",
                                             log.substring(1)),
-                                    Utils.makeEmbedField(
+                                    Utils.makeField(
                                             "Slash Commands",
-                                            booleanEmoji(Bot.LOAD_GLOBAL_COMMANDS) + " Loaded global commands\n" +
-                                            booleanEmoji(Bot.LOAD_LOCAL_COMMANDS) + " Loaded local commands")
+                                            booleanEmoji(Bot.Config.LOAD_GLOBAL_COMMANDS) + " Loaded global " +
+                                            "commands\n" +
+                                            booleanEmoji(Bot.Config.LOAD_LOCAL_COMMANDS) + " Loaded local commands")
                             ).build())
                     .queue();
         } catch (Exception e) {
@@ -134,61 +159,37 @@ public class OnStartup extends ListenerAdapter {
         Map<String, Boolean> map = new HashMap<>();
 
         // Set the Bot ID and Name
-        Bot.ID = Main.JDA.getSelfUser().getIdLong();
-        Bot.NAME = Main.JDA.getSelfUser().getName();
+        Bot.Self.USER = Main.JDA.getSelfUser();
+        Bot.Self.ID = Bot.Self.USER.getIdLong();
+        Bot.Self.NAME = Bot.Self.USER.getName();
 
         // Attempt to load bot.properties
         try {
-            InputStream stream = Utils.loadResource("/bot.properties");
+            InputStream stream = Utils.getResourceStream("/bot.properties");
             prop.load(stream);
             stream.close();
         } catch (NullPointerException e) {
-            LOG.error("Unable to locate bot.properties. Confirm that it is located in the " +
-                      "resources folder for the module containing Bot.java.");
+            LOG.error("Unable to locate the bot.properties file. Confirm that it is located in the " +
+                      "resources folder for the module containing Main.java.");
             return null;
         } catch (IOException e) {
-            LOG.error("Failed to read bot.properties on startup.", e);
+            LOG.error("Failed to read the bot.properties file on startup (IOException).", e);
             return null;
         }
 
+        // Get all the fields in the Bot class and its subclasses
+        Map<String, Field> fields = getAllFields(botClass);
+
         // Iterate through each of the properties in bot.properties and set the corresponding Bot class field
-
-        boolean success = false;
         for (String property : prop.stringPropertyNames())
-            try {
-                success = false;
-                // Attempt to set the field
-                Field field = botClass.getDeclaredField(property.toUpperCase(Locale.ROOT));
-                field.set(null, cast(prop.getProperty(property), field.getType()));
-
-                success = true;
-            } catch (NoSuchFieldException e) {
-                LOG.error("Unable to find a static Bot field '" + property.toUpperCase(Locale.ROOT) +
-                          "'. This property was not set.");
-            } catch (SecurityException |
-                    IllegalAccessException |
-                    IllegalArgumentException |
-                    NullPointerException e) {
-                LOG.error("Unable to set the '" + property.toUpperCase(Locale.ROOT) + "' property " +
-                          "within Bot.class. Is it marked public, static, and not final?");
-            } catch (ClassNotFoundException e) {
-                LOG.error("Unable to set the '" + property.toUpperCase(Locale.ROOT) + "' property " +
-                          "within Bot.class. " + e.getMessage());
-            } catch (Exception e) {
-                LOG.error("Unable to set the '" + property.toUpperCase(Locale.ROOT) + "' property " +
-                          "within Bot.class. Cause is unknown.");
-                e.printStackTrace();
-            } finally {
-                // Record whether the property was imported properly
-                map.put(property, success);
-            }
+            map.put(property, setProperty(property, prop.getProperty(property), fields));
 
         try {
             // Generate Activity from activity types
-            Bot.ACTIVITY = getActivity(
-                    Bot.ACTIVITY_TYPE,
-                    Bot.ACTIVITY_TEXT,
-                    Bot.ACTIVITY_URL);
+            Bot.Status.ACTIVITY = getActivity(
+                    Bot.Status.ACTIVITY_TYPE,
+                    Bot.Status.ACTIVITY_TEXT,
+                    Bot.Status.ACTIVITY_URL);
         } catch (Exception e) {
             LOG.error("Invalid status. Failed to compile activity properly", e);
         }
@@ -200,6 +201,117 @@ public class OnStartup extends ListenerAdapter {
                 prop.stringPropertyNames().size() - successes));
 
         return map;
+    }
+
+    /**
+     * Store the value of the given property in the field with the same name.
+     *
+     * @param property the property name
+     * @param value    the property value
+     * @param fields   the list of all fields in the {@link Bot} class.
+     *
+     * @return <code>true</code> if and only if the value is set without errors; <code>false</code> if an exception
+     *         is thrown and an error is {@link #LOG logged} to the console.
+     */
+    private static boolean setProperty(@Nonnull String property, @Nonnull String value,
+                                       @Nonnull Map<String, Field> fields) {
+        String name = property.toUpperCase();
+
+        try {
+            // Attempt to set the field
+            Field field = fields.get(property.toUpperCase());
+            if (field == null)
+                throw new NoSuchFieldException();
+            field.set(null, cast(value, field.getType()));
+
+            return true;
+        } catch (NoSuchFieldException e) {
+            LOG.error("Unable to find a static Bot field with the name '" + name +
+                      "'. This property was not set.");
+        } catch (SecurityException |
+                IllegalAccessException |
+                NullPointerException |
+                IllegalArgumentException e) {
+            LOG.error("Unable to set the property '" + name + "'. Is it marked public, static, and not final?");
+        } catch (ClassNotFoundException e) {
+            LOG.error("Unable to set the property '" + name + "'. " + e.getMessage());
+        } catch (Exception e) {
+            LOG.error("Unable to set the property '" + name + "'. Cause is unknown.", e);
+        }
+
+        return false;
+    }
+
+    /**
+     * Get all the {@link Field Fields} accessible within a given {@link Class} and return them as a map based on their
+     * {@link Field#getName() name}.
+     * <p>
+     * If multiple fields with the same name are found, a warning is {@link #LOG logged} to the console and only the
+     * first encountered field is included.
+     * <p>
+     * If any exception occurs that prevents retrieving the fields, a warning is logged and an empty map is returned.
+     *
+     * @param baseClass the base class to search (all its sub classes are searched as well)
+     *
+     * @return a map of fields based on their names
+     */
+    @Nonnull
+    private static Map<String, Field> getAllFields(@Nonnull Class<?> baseClass) {
+        Map<String, Field> allFields = new HashMap<>();
+
+        // Go through each subclass looking for fields
+        List<Class<?>> subClasses = getSubClasses(baseClass);
+
+        //List<Class<?>> subClasses = new ArrayList<>(List.of(baseClass));
+        for (Class<?> subClass : subClasses) {
+            try {
+                // Get each field in the class and add it to the fields map
+                Field[] fields = subClass.getDeclaredFields();
+                for (Field field : fields)
+                    if (allFields.containsKey(field.getName()))
+                        LOG.warn(String.format(
+                                "Found duplicate field name '%s' within class '%s'. Ignoring duplicate instance.",
+                                field.getName(), baseClass.getName()
+                        ));
+                    else
+                        allFields.put(field.getName(), field);
+
+            } catch (SecurityException ignore) {
+                LOG.error("Unable to load subclasses of '" + baseClass.getName() + "' class. " +
+                          "Encountered a security exception.");
+            }
+        }
+
+        return allFields;
+    }
+
+    /**
+     * Retrieve a list of all the subclasses contained within the given class (including the baseClass itself). This
+     * runs recursively.
+     * <p>
+     * If any exception occurs that prevents retrieving the fields, a warning is {@link #LOG logged} and an empty list
+     * is returned.
+     *
+     * @param baseClass the top level class to consider
+     *
+     * @return an array of the top level class and all sub classes
+     */
+    @Nonnull
+    private static List<Class<?>> getSubClasses(@Nonnull Class<?> baseClass) {
+        try {
+            List<Class<?>> classes = new ArrayList<>();
+            List<Class<?>> subClasses = new ArrayList<>(List.of(baseClass.getClasses()));
+
+            for (Class<?> subClass : subClasses)
+                classes.addAll(getSubClasses(subClass));
+
+            classes.add(baseClass);
+            return classes;
+        } catch (SecurityException e) {
+            LOG.error("Unable to load subclasses of '" + baseClass.getName() + "' class. " +
+                      "Encountered a security exception.", e);
+            return new ArrayList<>();
+        }
     }
 
     /**
@@ -224,8 +336,8 @@ public class OnStartup extends ListenerAdapter {
      * @return the newly created {@link Activity}, or <code>null</code>> if the activity type was '<code>default</code>'
      *         or unknown
      */
-    private static @Nullable Activity getActivity(
-            @NotNull String type, @NotNull String text, @Nullable String url) {
+    @Nullable
+    private static Activity getActivity(@Nonnull String type, @Nonnull String text, @Nullable String url) {
         return switch (type.toLowerCase(Locale.ROOT)) {
             case "streaming", "1" -> Activity.streaming(text, url);
             case "playing" -> Activity.playing(text);
@@ -245,7 +357,8 @@ public class OnStartup extends ListenerAdapter {
      *
      * @return the converted object matching the Java type of the type parameter
      */
-    private static Object cast(String value, Class<?> type) throws ClassNotFoundException {
+    @Nonnull
+    private static Object cast(@Nonnull String value, @Nonnull Class<?> type) throws ClassNotFoundException {
         if (type == String.class)
             return value;
 

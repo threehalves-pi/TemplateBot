@@ -18,7 +18,7 @@ public class Main {
 
     public static void main(String[] args) throws IOException, LoginException {
         String token = new String(
-                Utils.loadResource("/bot.token").readAllBytes()
+                Utils.getResourceStream("/bot.token").readAllBytes()
         );
 
         JDA = JDABuilder.createDefault(token)

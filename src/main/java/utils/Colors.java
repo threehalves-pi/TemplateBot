@@ -9,6 +9,9 @@ import java.awt.Color;
  * it includes the colors from Discord's official color palette.
  * <p><b><a href="https://discord.com/branding">Current Branding</a></b>
  * <p><b><a href="https://web.archive.org/web/20210409112419/discord.com/branding">Old Branding</a></b>
+ * <p>
+ * <i>Note that some constants here, namely {@link #RED}, are used by the TemplateBot core library. They should not be
+ * removed. See {@link Utils#error(String)}.</i>
  */
 public class Colors {
     // The official Discord palette according to https://discord.com/branding
