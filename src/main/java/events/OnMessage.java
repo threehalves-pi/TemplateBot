@@ -34,12 +34,11 @@ public class OnMessage extends ListenerAdapter {
         MessageChannel channel = event.getChannel();
         String[] args = contents.split("\\s+");
 
-
         // Check and evaluate commands
         switch (args[0].toLowerCase(Locale.ROOT)) {
             case "ping" -> channel.sendMessage("pong").queue();
             case "pong" -> channel.sendMessage("ping").queue();
-            default -> Utils.error(channel, "Sorry, I don't recognize that command.");
+            default -> Utils.error(message, "Sorry, I don't recognize that command.");
         }
     }
 }
