@@ -7,11 +7,12 @@ import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.entities.User;
 
 import java.awt.Color;
+import java.util.Map;
 
 /**
  * This class is designed to work with the <code>bot.properties</code> resource file associated with this Discord bot.
  * All the properties contained in that file have a matching instance variable here that is set with {@link
- * OnStartup#loadProperties() loadProperties()} in {@link OnStartup}.
+ * OnStartup#loadProperties(Map) loadProperties()} in {@link OnStartup}.
  * <p>
  * To create a new property, add a line to <code>bot.properties</code> in the following format:
  * <p>
@@ -22,7 +23,7 @@ import java.awt.Color;
  * Bot} field is <code>public</code> and <code>static</code>, but <i>not</i> <code>final</code>.
  * <p>
  * The property will automatically be loaded from <code>bot.properties</code> to the {@link Bot} field by the private
- * {@link OnStartup#loadProperties() loadproperties()} method. If you use a non-standard field type, you will need to
+ * {@link OnStartup#loadProperties(Map) loadproperties()} method. If you use a non-standard field type, you will need to
  * modify the {@link OnStartup#cast(String, Class) cast()} method to support that type. By default, it supports:
  * <ul>
  * <li>{@link String}</li>
@@ -114,7 +115,7 @@ public class Bot {
         public static String PREFIX;
 
         /**
-         * If enabled, the bot's global slash commands will be sent to Discord on {@link OnStartup#startupTasks()
+         * If enabled, the bot's global slash commands will be sent to Discord on {@link OnStartup#startupTasks(Map)
          * startup}. Make sure to disable this while not actively modifying slash commands, as overuse can result in
          * Discord rate-limiting or even banning the bot account.
          * <p>
@@ -126,7 +127,7 @@ public class Bot {
 
         /**
          * If enabled, the bot's local slash commands (for each server, namely the {@link ID.Guild#DEVELOPMENT
-         * development} one) will be sent to Discord on {@link OnStartup#startupTasks() startup}. This should be
+         * development} one) will be sent to Discord on {@link OnStartup#startupTasks(Map) startup}. This should be
          * disabled while not actively modifying slash commands.
          * <p>
          * <i>This constant is used by the TemplateBot core library. It should not be renamed or removed.</i>
@@ -222,7 +223,7 @@ public class Bot {
         public static class Channel {
             /**
              * This is the channel in the {@link Guild#DEVELOPMENT development} server where the startup {@link
-             * Config#ENABLE_STARTUP_MESSAGE message} is sent when the bot {@link OnStartup#startupTasks() starts}.
+             * Config#ENABLE_STARTUP_MESSAGE message} is sent when the bot {@link OnStartup#startupTasks(Map) starts}.
              * <p>
              * <i>This constant is used by the TemplateBot core library. It should not be renamed or removed.</i>
              *
