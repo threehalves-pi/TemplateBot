@@ -25,7 +25,7 @@ public class Utils {
     /**
      * This logger is used exclusively for errors thrown by utility methods defined in this class.
      */
-    public static final Logger LOG = JDALogger.getLog(OnStartup.class);
+    public static final Logger LOG = JDALogger.getLog(Utils.class);
 
     /**
      * Get a {@link Class#getResource(String) resource} with the given file name. Note that this is based on the {@link
