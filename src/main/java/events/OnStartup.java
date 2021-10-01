@@ -50,9 +50,8 @@ public class OnStartup extends ListenerAdapter {
         if (Bot.Config.ENABLE_STARTUP_MESSAGE)
             sendLogMessage(propertyImportResults);
 
-        // Set bot status and activity
-        Main.JDA.getPresence().setPresence(Bot.Status.STATUS, Bot.Status.ACTIVITY);
-        LOG.info("Updated bot presence");
+        // Set the bot status and activity
+        setStatus();
 
         // Load slash commands, if applicable
         if (Bot.Config.LOAD_GLOBAL_COMMANDS)
@@ -77,6 +76,7 @@ public class OnStartup extends ListenerAdapter {
                 event.getGuildUnavailableCount(),
                 event.getGuildTotalCount()));
 
+        // Run startup tasks
         try {
             startupTasks();
         } catch (Exception e) {
@@ -184,18 +184,8 @@ public class OnStartup extends ListenerAdapter {
         for (String property : prop.stringPropertyNames())
             map.put(property, setProperty(property, prop.getProperty(property), fields));
 
-        try {
-            // Generate Activity from activity types
-            Bot.Status.ACTIVITY = getActivity(
-                    Bot.Status.ACTIVITY_TYPE,
-                    Bot.Status.ACTIVITY_TEXT,
-                    Bot.Status.ACTIVITY_URL);
-        } catch (Exception e) {
-            LOG.error("Invalid status. Failed to compile activity properly", e);
-        }
-
         // Log result to console
-        int successes = map.values().stream().mapToInt(v -> (v ? 1 : 0)).sum();
+        int successes = (int) map.values().stream().filter(b -> b).count();
         LOG.info(String.format("Loaded %d properties with %d failures from bot.properties",
                 successes,
                 prop.stringPropertyNames().size() - successes));
@@ -315,8 +305,12 @@ public class OnStartup extends ListenerAdapter {
     }
 
     /**
-     * This returns an {@link Activity} based on the type of activity and the text associated with it. If the activity
-     * type is '<code>default</code>', '<code>0</code>', or not recognized, <code>null</code> is returned instead.
+     * This creates and sets an {@link Activity} based on the {@link Bot.Status#ACTIVITY_TYPE type}, {@link
+     * Bot.Status#ACTIVITY_TEXT text}, and {@link Bot.Status#ACTIVITY_URL URL} parameters from
+     * <code>bot.properties</code>.
+     * <p>
+     * It also sets the bot {@link Bot.Status#STATUS status} at the same time. If the bot status is {@link
+     * OnlineStatus#UNKNOWN unknown} or <code>null</code>, no activity or status is set.
      * <p>
      * Activity types are based on the names and keys of {@link Activity.ActivityType} enums. The following activity
      * type values are recognized:
@@ -328,24 +322,39 @@ public class OnStartup extends ListenerAdapter {
      *     <li>'<code>competing</code>' or '<code>5</code>'</li>
      *     <li>'<code>playing</code>'</li>
      * </ul>
-     *
-     * @param type the name of the desired {@link Activity.ActivityType} enum, or its key
-     * @param text the text (if applicable) associated with the desired {@link Activity.ActivityType}
-     * @param url  the streaming url (only relevant if the activity is <code>"streaming"</code>)
-     *
-     * @return the newly created {@link Activity}, or <code>null</code>> if the activity type was '<code>default</code>'
-     *         or unknown
      */
-    @Nullable
-    private static Activity getActivity(@Nonnull String type, @Nonnull String text, @Nullable String url) {
-        return switch (type.toLowerCase(Locale.ROOT)) {
-            case "streaming", "1" -> Activity.streaming(text, url);
-            case "playing" -> Activity.playing(text);
-            case "listening", "2" -> Activity.listening(text);
-            case "watching", "3" -> Activity.watching(text);
-            case "competing", "5" -> Activity.competing(text);
-            default -> null;
-        };
+    private static void setStatus() {
+        try {
+            try {
+                // Create the desired Activity
+                Bot.Status.ACTIVITY = switch (Bot.Status.ACTIVITY_TYPE.toLowerCase(Locale.ROOT)) {
+                    case "streaming", "1" -> Activity.streaming(Bot.Status.ACTIVITY_TEXT, Bot.Status.ACTIVITY_URL);
+                    case "playing" -> Activity.playing(Bot.Status.ACTIVITY_TEXT);
+                    case "listening", "2" -> Activity.listening(Bot.Status.ACTIVITY_TEXT);
+                    case "watching", "3" -> Activity.watching(Bot.Status.ACTIVITY_TEXT);
+                    case "competing", "5" -> Activity.competing(Bot.Status.ACTIVITY_TEXT);
+                    default -> null;
+                };
+            } catch (IllegalArgumentException e) {
+                LOG.error("Invalid activity parameters: bot status was not set. Failed to compile activity properly. " +
+                          "Check activity_type, activity_text, and activity_url properties.\n" +
+                          e.getClass().getName() + ": " + e.getMessage());
+                Bot.Status.ACTIVITY = null;
+                return;
+            }
+
+            // If the status or activity is null or unknown, don't set it.
+            if (Bot.Status.ACTIVITY == null || Bot.Status.STATUS == null || Bot.Status.STATUS == OnlineStatus.UNKNOWN)
+                return;
+
+            // Set bot status and activity
+            Main.JDA.getPresence().setPresence(Bot.Status.STATUS, Bot.Status.ACTIVITY);
+            LOG.info("Updated bot presence. Set status to " + Bot.Status.STATUS.name() + ".");
+
+        } catch (Exception e) {
+            LOG.error("Encountered an unexpected error while attempting to set the bot status and activity:\n" +
+                      e.getClass().getName() + ": " + e.getMessage());
+        }
     }
 
     /**
