@@ -378,8 +378,10 @@ public class Utils {
     }
 
     /**
-     * Get a {@link Guild} with the matching snowflake id. If no connected guild is found, <code>null</code> is
-     * returned, and an error message is {@link #LOG logged} to the console.
+     * Get a {@link Guild} with the matching snowflake id.
+     * <p>
+     * If no connected guild is found, <code>null</code> is returned, and an error message is {@link #LOG logged} to the
+     * console.
      *
      * @param id the snowflake id of the desired guild.
      *
