@@ -139,7 +139,7 @@ public class Bot {
 
     /**
      * Constants pertaining to the bot's {@link OnlineStatus status} settings at startup (online, idle,
-     * listening/playing, etc).
+     * listening/playing, etc.)
      */
     public static class Status {
         /**
