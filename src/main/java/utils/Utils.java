@@ -201,7 +201,7 @@ public class Utils {
      * @param message the error message
      *
      * @return an error embed
-     * @see #error(Exception)
+     * @see #error(Throwable)
      */
     public static EmbedBuilder error(@Nonnull String message) {
         return makeEmbed("Error", message, Colors.RED).setTimestamp(Instant.now());
@@ -215,7 +215,7 @@ public class Utils {
      * @return an error embed
      * @see #error(String)
      */
-    public static EmbedBuilder error(@Nonnull Exception exception) {
+    public static EmbedBuilder error(@Nonnull Throwable exception) {
         return error(String.format("**%s**: %s", exception.getClass().getName(), exception.getMessage()));
     }
 
@@ -226,7 +226,7 @@ public class Utils {
      * @param message the error message
      *
      * @see #error(String)
-     * @see #error(MessageChannel, Exception)
+     * @see #error(MessageChannel, Throwable)
      * @see #error(Message, String)
      */
     public static void error(@Nonnull MessageChannel channel, @Nonnull String message) {
@@ -240,7 +240,7 @@ public class Utils {
      * @param error   the error message
      *
      * @see #error(String)
-     * @see #error(Message, Exception)
+     * @see #error(Message, Throwable)
      * @see #error(MessageChannel, String)
      */
     public static void error(@Nonnull Message message, @Nonnull String error) {
@@ -255,7 +255,7 @@ public class Utils {
      * @param message     the error message
      *
      * @see #error(String)
-     * @see #error(GenericInteractionCreateEvent, Exception)
+     * @see #error(GenericInteractionCreateEvent, Throwable)
      * @see #error(GenericInteractionCreateEvent, String, boolean)
      * @see #error(InteractionHook, String)
      */
@@ -273,7 +273,7 @@ public class Utils {
      *                    ReplyAction#setEphemeral(boolean) setEphemeral(boolean)}.
      *
      * @see #error(String)
-     * @see #error(GenericInteractionCreateEvent, Exception, boolean)
+     * @see #error(GenericInteractionCreateEvent, Throwable, boolean)
      * @see #error(GenericInteractionCreateEvent, String)
      * @see #error(GenericInteractionCreateEvent, String, boolean)
      */
@@ -290,7 +290,7 @@ public class Utils {
      * @param message     the error message
      *
      * @see #error(String)
-     * @see #error(InteractionHook, Exception)
+     * @see #error(InteractionHook, Throwable)
      * @see #error(GenericInteractionCreateEvent, String)
      * @see #error(GenericInteractionCreateEvent, String, boolean)
      */
@@ -299,51 +299,51 @@ public class Utils {
     }
 
     /**
-     * Send an {@link #error(Exception) error} to the given {@link MessageChannel channel}.
+     * Send an {@link #error(Throwable) error} to the given {@link MessageChannel channel}.
      *
      * @param channel   the channel
      * @param exception the exception that was thrown
      *
-     * @see #error(Exception)
+     * @see #error(Throwable)
      * @see #error(MessageChannel, String)
-     * @see #error(Message, Exception)
+     * @see #error(Message, Throwable)
      */
-    public static void error(@Nonnull MessageChannel channel, @Nonnull Exception exception) {
+    public static void error(@Nonnull MessageChannel channel, @Nonnull Throwable exception) {
         channel.sendMessageEmbeds(error(exception).build()).queue();
     }
 
     /**
-     * Send an {@link #error(Exception) error} as a reply to a given {@link Message}.
+     * Send an {@link #error(Throwable) error} as a reply to a given {@link Message}.
      *
      * @param message   the channel
      * @param exception the exception that was thrown
      *
-     * @see #error(Exception)
+     * @see #error(Throwable)
      * @see #error(Message, String)
-     * @see #error(MessageChannel, Exception)
+     * @see #error(MessageChannel, Throwable)
      */
-    public static void error(@Nonnull Message message, @Nonnull Exception exception) {
+    public static void error(@Nonnull Message message, @Nonnull Throwable exception) {
         message.replyEmbeds(error(exception).build()).queue();
     }
 
     /**
-     * Send an {@link #error(Exception) error} as an {@link ReplyAction#setEphemeral(boolean) ephemeral} reply to a
+     * Send an {@link #error(Throwable) error} as an {@link ReplyAction#setEphemeral(boolean) ephemeral} reply to a
      * given {@link GenericInteractionCreateEvent interaction}.
      *
      * @param interaction the interaction
      * @param exception   the exception that was thrown
      *
-     * @see #error(Exception)
+     * @see #error(Throwable)
      * @see #error(GenericInteractionCreateEvent, String)
-     * @see #error(GenericInteractionCreateEvent, Exception, boolean)
-     * @see #error(MessageChannel, Exception)
+     * @see #error(GenericInteractionCreateEvent, Throwable, boolean)
+     * @see #error(MessageChannel, Throwable)
      */
-    public static void error(@Nonnull GenericInteractionCreateEvent interaction, @Nonnull Exception exception) {
+    public static void error(@Nonnull GenericInteractionCreateEvent interaction, @Nonnull Throwable exception) {
         interaction.replyEmbeds(error(exception).build()).setEphemeral(true).queue();
     }
 
     /**
-     * Send an {@link #error(Exception) error} as reply to a given {@link GenericInteractionCreateEvent interaction}.
+     * Send an {@link #error(Throwable) error} as reply to a given {@link GenericInteractionCreateEvent interaction}.
      * Allows control over whether the message is {@link ReplyAction#setEphemeral(boolean) ephemeral}.
      *
      * @param interaction the interaction
@@ -351,29 +351,29 @@ public class Utils {
      * @param ephemeral   whether the message should be ephemeral; passed directly to {@link
      *                    ReplyAction#setEphemeral(boolean) setEphemeral(boolean)}.
      *
-     * @see #error(Exception)
+     * @see #error(Throwable)
      * @see #error(GenericInteractionCreateEvent, String, boolean)
-     * @see #error(GenericInteractionCreateEvent, Exception)
-     * @see #error(InteractionHook, Exception)
+     * @see #error(GenericInteractionCreateEvent, Throwable)
+     * @see #error(InteractionHook, Throwable)
      */
-    public static void error(@Nonnull GenericInteractionCreateEvent interaction, @Nonnull Exception exception,
+    public static void error(@Nonnull GenericInteractionCreateEvent interaction, @Nonnull Throwable exception,
                              boolean ephemeral) {
         interaction.replyEmbeds(error(exception).build()).setEphemeral(ephemeral).queue();
     }
 
     /**
-     * Send an {@link #error(Exception) error} by editing a given {@link InteractionHook interaction} response that was
+     * Send an {@link #error(Throwable) error} by editing a given {@link InteractionHook interaction} response that was
      * initially {@link GenericInteractionCreateEvent#deferReply() defered}.
      *
      * @param interaction the interaction
      * @param exception   the exception that was thrown
      *
-     * @see #error(Exception)
+     * @see #error(Throwable)
      * @see #error(InteractionHook, String)
-     * @see #error(GenericInteractionCreateEvent, Exception)
-     * @see #error(GenericInteractionCreateEvent, Exception, boolean)
+     * @see #error(GenericInteractionCreateEvent, Throwable)
+     * @see #error(GenericInteractionCreateEvent, Throwable, boolean)
      */
-    public static void error(@Nonnull InteractionHook interaction, @Nonnull Exception exception) {
+    public static void error(@Nonnull InteractionHook interaction, @Nonnull Throwable exception) {
         interaction.editOriginalEmbeds(error(exception).build()).queue();
     }
 
