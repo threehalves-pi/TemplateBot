@@ -6,18 +6,20 @@ import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.events.interaction.GenericInteractionCreateEvent;
 import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.requests.restaction.interactions.ReplyAction;
+import net.dv8tion.jda.api.utils.TimeFormat;
 import net.dv8tion.jda.internal.utils.JDALogger;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.awt.Color;
+import java.awt.*;
 import java.io.File;
 import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.time.Instant;
+import java.util.EnumSet;
 import java.util.Objects;
 
 public class Utils {
@@ -155,7 +157,7 @@ public class Utils {
      * @return the {@link EmbedBuilder}
      */
     @Nonnull
-    public static EmbedBuilder makeEmbed(@Nonnull String title, @Nonnull String description, @Nonnull Color color,
+    public static EmbedBuilder makeEmbed(@Nullable String title, @Nonnull String description, @Nonnull Color color,
                                          MessageEmbed.Field... fields) {
         EmbedBuilder e = makeEmbed(title, description, color);
         for (MessageEmbed.Field field : fields)
@@ -191,7 +193,7 @@ public class Utils {
      * @return the {@link EmbedBuilder}
      */
     @Nonnull
-    public static EmbedBuilder makeEmbed(@Nonnull String title, @Nonnull String description, @Nonnull Color color) {
+    public static EmbedBuilder makeEmbed(@Nullable String title, @Nonnull String description, @Nonnull Color color) {
         return new EmbedBuilder().setTitle(title).setDescription(description).setColor(color);
     }
 
@@ -434,5 +436,42 @@ public class Utils {
     @Nonnull
     public static String link(@NotNull String text, @NotNull String url) {
         return String.format("[%s](%s)", text, url);
+    }
+
+    /**
+     * Get an {@link EmbedBuilder} that contains a nicely formatted profile display for user.
+     *
+     * @param user the user to display
+     *
+     * @return an info panel for the user
+     */
+    public static EmbedBuilder getUserPanel(User user) {
+        EmbedBuilder embed = Utils.makeEmbed(
+                null,
+                "",
+                Colors.NOT_QUITE_BLACK,
+                Utils.makeField("Tag",
+                        String.format("Name: %s%nDiscriminator: %s",
+                                user.getName(), user.getDiscriminator())),
+                Utils.makeField("Account",
+                        String.format("Created: %s%nID: `%d`",
+                                TimeFormat.DATE_TIME_LONG.format(user.getTimeCreated()), user.getIdLong()))
+        );
+
+        EnumSet<User.UserFlag> flags = user.getFlags();
+        if (flags.size() > 0) {
+            StringBuilder list = new StringBuilder();
+            flags.forEach(flag -> list.append(System.lineSeparator()).append(flag.getName()));
+            embed.addField(Utils.makeField("Profile Flags", list.substring(1)));
+        }
+
+        if (user.isBot())
+            embed.addField(Utils.makeField("Account Type", "Bot"));
+
+        embed.setTimestamp(Instant.now());
+        embed.setThumbnail(user.getEffectiveAvatarUrl());
+        embed.setAuthor(user.getAsTag(), null, user.getEffectiveAvatarUrl());
+
+        return embed;
     }
 }

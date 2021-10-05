@@ -38,6 +38,7 @@ public class OnMessage extends ListenerAdapter {
         switch (args[0].toLowerCase(Locale.ROOT)) {
             case "ping" -> channel.sendMessage("pong").queue();
             case "pong" -> channel.sendMessage("ping").queue();
+            case "user" -> channel.sendMessageEmbeds(Utils.getUserPanel(user).build()).queue();
             default -> Utils.error(message, "Sorry, I don't recognize that command.");
         }
     }
